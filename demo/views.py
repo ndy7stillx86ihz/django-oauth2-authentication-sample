@@ -25,35 +25,25 @@ from requests.models import PreparedRequest
 from core import settings
 from oauthlib.oauth2 import WebApplicationClient
 
-# Contact GitHub to authenticate
 def github_login(request):
-
-    # Set up a Web Application Client from oauthlib
     client_id = settings.OAUTH_CLIENT_ID
+
     client = WebApplicationClient(client_id)
 
-    # GitHub Authorize URL
-    authorization_url = 'https://github.com/login/oauth/authorize'
+    authorization_url = settings.OAUTH_AUTHORIZATION_URI
 
     # Store state info in session
     request.session['state'] = secrets.token_urlsafe(16)
 
-    """
-    Generate a complete authorization url with parameters
-    https://github.com/login/oauth/authorize?response_type=code&client_id=<client_id>&redirect_uri=https://example.com/callback&scope=read%3Auser&state=<state>&allow_signup=false'
-    """
-
     url = client.prepare_request_uri(
       authorization_url, 
-      redirect_uri = settings.GITHUB_OAUTH_CALLBACK_URL,
-      scope = ['read:user'],
-      state = request.session['state'],
-      allow_signup = 'false'
+      redirect_uri = settings.OAUTH_CALLBACK_URL,
+      scope = settings.OAUTH_SCOPES,
+      state = request.session['state']
     )
 
     print('authorization_url', url)
 
-    # Redirect to the complete authorization url
     return HttpResponseRedirect(url)
 
 class CallbackView(TemplateView):
@@ -75,15 +65,15 @@ class CallbackView(TemplateView):
         messages.ERROR,
         "State information mismatch!"
       )
-      return HttpResponseRedirect(reverse('github:welcome'))
+      return HttpResponseRedirect(reverse('demo:welcome'))
     else:
       del self.request.session['state']
 
 
     # fetch the access token from GitHub's API at token_url
-    token_url = 'https://github.com/login/oauth/access_token'
-    client_id = settings.GITHUB_OAUTH_CLIENT_ID    
-    client_secret = settings.GITHUB_OAUTH_SECRET
+    token_url = settings.OAUTH_TOKEN_URI
+    client_id = settings.OAUTH_CLIENT_ID
+    client_secret = settings.OAUTH_CLIENT_SECRET
 
     # Create a Web Applicantion Client from oauthlib
     client = WebApplicationClient(client_id)
@@ -91,14 +81,25 @@ class CallbackView(TemplateView):
     # Prepare body for request
     data = client.prepare_request_body(
       code = code,
-      redirect_uri = settings.GITHUB_OAUTH_CALLBACK_URL,
+      redirect_uri = settings.OAUTH_CALLBACK_URL,
       client_id = client_id,
       client_secret = client_secret
     )
 
+    print("DATA: ", data)
+
     # Post a request at GitHub's token_url
     # Returns requests.Response object
-    response = requests.post(token_url, data=data)
+    response = requests.post(
+      token_url,
+      headers={
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      data=data
+    )
+    print("Status Code:", response.status_code)  # Debería ser 200
+    print("Headers:", response.headers)  # Verifica Content-Type
+    print("Response Text:", response.text)  # Body de la respuesta
 
     """
     Parse the unicode content of the response object
@@ -109,16 +110,17 @@ class CallbackView(TemplateView):
       'token_type': 'bearer'
     }
     """
+    print("ASDAAAAAAAAAAAAAAAAA" + response.text)
     client.parse_request_body_response(response.text)
     
     # Prepare an Authorization header for GET request using the 'access_token' value
     # using GitHub's official API format
-    header = {'Authorization': 'token {}'.format(client.token['access_token'])}
+    header = {'Authorization': f'Bearer {client.token["access_token"]}'}
     
     # Retrieve GitHub profile data
     # Send a GET request
     # Returns requests.Response object
-    response = requests.get('https://api.github.com/user', headers=header)
+    response = requests.get(settings.OAUTH_USERINFO_URI, headers=header)
 
     # Store profile data in JSON
     json_dict  = response.json()
@@ -138,7 +140,7 @@ class CallbackView(TemplateView):
 
     # retrieve or create a Django User for this profile
     try:
-      user = User.objects.get(username=json_dict['login'])
+      user = User.objects.get(username=json_dict['username'])
 
       messages.add_message(self.request, messages.DEBUG, "User %s already exists, Authenticated? %s" %(user.username, user.is_authenticated))
 
@@ -149,7 +151,7 @@ class CallbackView(TemplateView):
 
     except:
       # create a Django User for this login
-      user = User.objects.create_user(json_dict['login'], json_dict['email'])
+      user = User.objects.create_user(json_dict['username'], json_dict['email'])
 
       messages.add_message(self.request, messages.DEBUG, "User %s is created, Authenticated %s?" %(user.username, user.is_authenticated))
 
@@ -159,7 +161,7 @@ class CallbackView(TemplateView):
       login(self.request,user)
 
     # Redirect response to hide the callback url in browser
-    return HttpResponseRedirect(reverse('github:welcome'))
+    return HttpResponseRedirect(reverse('demo:welcome'))
 
 
 class WelcomeView(TemplateView):

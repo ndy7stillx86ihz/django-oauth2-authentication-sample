@@ -9,7 +9,7 @@
             </p>
             <img src="{{ request.session.profile.avatar_url }}" width="50%">
             <p>
-                <a href="{% url 'github:logout' %}" class="w3-bar-item w3-border-right w3-button w3-theme w3-round">Logout </a>
+                <a href="{% url 'demo:logout' %}" class="w3-bar-item w3-border-right w3-button w3-theme w3-round">Logout </a>
             </p>
         {% else %}
             Sorry, there is a problem authenticating you. Please try again.

@@ -1,9 +1,10 @@
 from django.urls import path
 from . import views
-from github.views import PageView, HomeView, CallbackView, WelcomeView
+from demo.views import PageView, HomeView, CallbackView, WelcomeView
 
-app_name = 'github'
+app_name = 'demo'
 
+# TODO: cambiar las cosas de auth, para /auth/...
 urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('welcome', WelcomeView.as_view(), name='welcome'),
