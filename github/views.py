@@ -22,14 +22,14 @@ from django.contrib.auth import login, logout
 from django.contrib import messages
 import secrets
 from requests.models import PreparedRequest
-from auth import settings
+from core import settings
 from oauthlib.oauth2 import WebApplicationClient
 
 # Contact GitHub to authenticate
 def github_login(request):
 
-    # Setup a Web Application Client from oauthlib
-    client_id = settings.GITHUB_OAUTH_CLIENT_ID    
+    # Set up a Web Application Client from oauthlib
+    client_id = settings.OAUTH_CLIENT_ID
     client = WebApplicationClient(client_id)
 
     # GitHub Authorize URL
@@ -56,8 +56,6 @@ def github_login(request):
     # Redirect to the complete authorization url
     return HttpResponseRedirect(url)
 
-
-# Client Callback from GitHub
 class CallbackView(TemplateView):
 
   def get(self, request, *args, **kwargs):
@@ -66,7 +64,7 @@ class CallbackView(TemplateView):
     data = self.request.GET
     code = data['code']
     state = data['state']
-    print("code=%s, state=%s" %(code, state))
+    print(f"code={code}, state={state}")
 
     # For security purposes, verify that the
     # state information is the same as was passed
