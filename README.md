@@ -1,8 +1,9 @@
 # auth
-This is a sample Django app to authenticate with [GitHub](http://github.com) as a third-party OAuth2 provider.
+This app is a fork from the [OAuth2-Integration-with-OAuthlib-and-GitHub](https://github.com/mchesler613/OAuth2-Integration-with-OAuthlib-and-GitHub) 
+repo. This is a sample Django app to authenticate with an IDP as a third-party OAuth2 provider.
 
 ## Deployment
-This app is deployed on AWS running SSL [here](https://aws.djangodemo.com/auth). This app contains a secret page whose secret content can only be viewed after authenticating with GitHub.
+This app contains a secret page whose secret content can only be viewed after authenticating with the IDP.
 
 Before authentication, the [secret page](https://aws.djangodemo.com/auth/page/) looks like this:
 
@@ -18,22 +19,4 @@ This app uses the following Python packages
 + [oauthlib](https://github.com/oauthlib/oauthlib), to integrate with third-party OAuth2 providers, such as GitHub
 + [requests](https://github.com/psf/requests), to send HTTP GET and POST requests
 
-Other requirements include:
-+ a GitHub account to login
-+ a GitHub [OAuth](https://github.com/settings/developers) developer account to generic credentials such as `client id` and `client secret`. 
-+ an SSL connection to implement a client callback with a URL endpoint that receives communication back from GitHub's OAuth service.
-
-# Why I wrote this app?
-+ I wanted to understand and learn how to integrate with a third-party OAuth2 provider by writing some code myself, instead of plugging in a third-party Django app
-+ With _oauthlib_, I am able to write a client service that completes the [OAuth2 flow](https://oauthlib.readthedocs.io/en/latest/oauth2/clients/webapplicationclient.html) between the client and provider, which requires these steps: 
-  - request authorization from GitHub at an [authorized GitHub URL](https://github.com/login/oauth/authorize) with `client id` and `state` information and expecting a `code` back
-  - receive a `code` back from GitHub with the prior `state` information at the client's [callback URL](http://example.com/callback)
-  - fetch a token from GitHub's [token URL](https://github.com/login/oauth/access_token) passing `client secret` and `code` as arguments
-  - retrieve the authorized user profile data from [GitHub](https://api.github.com/user) as `JSON` data
-  - create a Django `User` account or reuse an existing authorized `User` account
-  - login to Django with `User` account
-  - proceed with Django app logic based on `User` privileges
-
-To learn more about GitHub's OAuth2 flow, refer to this [doc](https://docs.github.com/en/developers/apps/authorizing-oauth-apps#web-application-flow).
-
-I wrote a supporting article for this project [here](https://python.plainenglish.io/integrating-oauth2-in-django-with-github-and-oauthlib-341dd0069c2d?sk=ae9055be50f0a7273e0de9e8ad604085). If you found any bugs, or would like me to improve this article, please don't hesitate to contact me. Thanks.
+To learn more about OAuth2 flow, refer to this [doc](https://datatracker.ietf.org/doc/html/rfc6749).
