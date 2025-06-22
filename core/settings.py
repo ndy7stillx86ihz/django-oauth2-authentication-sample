@@ -35,7 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-
+    'demo',
+    'authentication'
 ]
 
 MIDDLEWARE = [
@@ -101,6 +102,7 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # OAuth Configuration
 OAUTH_SERVER_URL = os.getenv('OAUTH_SERVER_URL')
@@ -114,6 +116,6 @@ OAUTH_CLIENT_ID = os.getenv('OAUTH_CLIENT_ID')
 OAUTH_CLIENT_SECRET = os.getenv('OAUTH_CLIENT_SECRET')
 OAUTH_SCOPES = ['openid', 'profile', 'email']
 
-OAUTH_CALLBACK_URL = os.environ.get('OAUTH_CALLBACK_URL', 'http://localhost:8000/callback')
+OAUTH_CALLBACK_URL = os.environ.get('OAUTH_CALLBACK_URL', 'http://localhost:8000/auth/callback')
 
 #LOGIN_URL = '/login'

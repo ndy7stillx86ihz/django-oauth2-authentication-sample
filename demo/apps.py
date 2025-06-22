@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class GithubConfig(AppConfig):
+class DemoConfig(AppConfig):
     name = 'demo'
