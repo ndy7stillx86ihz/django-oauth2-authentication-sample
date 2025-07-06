@@ -1,136 +1,94 @@
 import secrets
+import requests as req
 
-import requests
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout, login
 from django.contrib.auth.models import User
-from django.http import HttpResponseRedirect
-from django.urls import reverse
-from django.views.generic.base import TemplateView
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
 from oauthlib.oauth2 import WebApplicationClient
+from authentication.utils import generate_pkce_pair
 
-from core import settings
+CLIENT_ID = settings.OAUTH_CLIENT_ID
 
-
-def oauth_login(request):
-    client_id = settings.OAUTH_CLIENT_ID
-
-    client = WebApplicationClient(client_id)
-
+def login_view(request):
     authorization_url = settings.OAUTH_AUTHORIZATION_URI
 
-    # Store state info in session
-    request.session['state'] = secrets.token_urlsafe(16)
+    client = WebApplicationClient(CLIENT_ID)
+
+    code_verifier, code_challenge = generate_pkce_pair()
+
+    request.session['state'] = secrets.token_urlsafe(16) # csrf
+    request.session['code_verifier'] = code_verifier
 
     url = client.prepare_request_uri(
         authorization_url,
         redirect_uri=settings.OAUTH_CALLBACK_URL,
         scope=settings.OAUTH_SCOPES,
-        state=request.session['state']
+        state=request.session['state'],
+        code_challenge=code_challenge,
+        code_challenge_method='S256',
+        ui_locales="es_ES"
     )
 
-    return HttpResponseRedirect(url)
+    return redirect(url)
 
 
-class CallbackView(TemplateView):
+def callback_view(request):
+    data = request.GET
+    code = data['code']
+    state = data.get('state', '')
 
-    def get(self, request, *args, **kwargs):
+    if request.session.get('state') != state or not code:
+        messages.add_message(
+            request,
+            messages.ERROR,
+            "State information mismatch!"
+        )
+        return redirect(reverse_lazy('authentication:login'))
+    else:
+        del request.session['state']
 
-        # Retrieve these data from the URL
-        data = self.request.GET
-        code = data['code']
-        state = data['state']
 
-        # For security purposes, verify that the
-        # state information is the same as was passed
-        # to github_login()
-        if self.request.session['state'] != state:
-            messages.add_message(
-                self.request,
-                messages.ERROR,
-                "State information mismatch!"
-            )
-            return HttpResponseRedirect(reverse('demo:welcome'))
-        else:
-            del self.request.session['state']
+    client = WebApplicationClient(CLIENT_ID)
 
-        # fetch the access token from GitHub's API at token_url
-        token_url = settings.OAUTH_TOKEN_URI
-        client_id = settings.OAUTH_CLIENT_ID
-        client_secret = settings.OAUTH_CLIENT_SECRET
-
-        # Create a Web Applicantion Client from oauthlib
-        client = WebApplicationClient(client_id)
-
-        # Prepare body for request
-        data = client.prepare_request_body(
+    response = req.post(
+        settings.OAUTH_TOKEN_URI,
+        headers={
+            "content-type": "application/x-www-form-urlencoded"
+        },
+        data=client.prepare_request_body(
             code=code,
             redirect_uri=settings.OAUTH_CALLBACK_URL,
-            client_id=client_id,
-            client_secret=client_secret
+            client_id=CLIENT_ID,
+            code_verifier=request.session['code_verifier']
         )
+    )
 
-        # Post a request at GitHub's token_url
-        # Returns requests.Response object
-        response = requests.post(
-            token_url,
-            headers={
-                "content-type": "application/x-www-form-urlencoded"
-            },
-            data=data
-        )
+    client.parse_request_body_response(response.text)
 
-        """
-        Parse the unicode content of the response object
-        Returns a dictionary stored in client.token
-        {
-          'access_token': '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',
-          'scope': ['read:user'],
-          'token_type': 'bearer'
-        }
-        """
-        client.parse_request_body_response(response.text)
+    response = req.get(settings.OAUTH_USERINFO_URI, headers={
+        'Authorization': f'Bearer {client.token["access_token"]}'
+    })
 
-        # Prepare an Authorization header for GET request using the 'access_token' value
-        # using GitHub's official API format
-        header = {'Authorization': f'Bearer {client.token["access_token"]}'}
+    json_dict = response.json()
 
-        # Retrieve GitHub profile data
-        # Send a GET request
-        # Returns requests.Response object
-        response = requests.get(settings.OAUTH_USERINFO_URI, headers=header)
+    request.session['profile'] = json_dict
 
-        # Store profile data in JSON
-        json_dict = response.json()
+    user, _ = User.objects.get_or_create(username=json_dict['username'])
+    login(request, user)
 
-        # save the user profile in a session
-        self.request.session['profile'] = json_dict
-
-        # retrieve or create a Django User for this profile
-        try:
-            user = User.objects.get(username=json_dict['username'])
-
-            messages.add_message(self.request, messages.DEBUG,
-                                 "User %s already exists, Authenticated? %s" % (user.username, user.is_authenticated))
-
-            # remember to log the user into the system
-            login(self.request, user)
-
-        except:
-            # create a Django User for this login
-            user = User.objects.create_user(json_dict['username'], json_dict['email'])
-
-            messages.add_message(self.request, messages.DEBUG,
-                                 "User %s is created, Authenticated %s?" % (user.username, user.is_authenticated))
-
-            # remember to log the user into the system
-            login(self.request, user)
-
-        # Redirect response to hide the callback url in browser
-        return HttpResponseRedirect(reverse('demo:welcome'))
+    return redirect(reverse_lazy('demo:home'))
 
 
-def logout_request(request):
+def logout_view(request):
+    # fixme: no desautentica bien
     logout(request)
-    messages.add_message(request, messages.SUCCESS, "You are successfully logged out")
-    return HttpResponseRedirect(reverse('demo:home'))
+    params = {
+        "client_id": CLIENT_ID,
+        "post_logout_redirect_uri": request.build_absolute_uri(reverse_lazy("demo:home")),
+        "state": request.session.get('state', '')
+    }
+
+    return redirect(params["post_logout_redirect_uri"])

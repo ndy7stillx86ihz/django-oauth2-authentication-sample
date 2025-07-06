@@ -113,7 +113,6 @@ OAUTH_JWKS_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_JWKS_ENDPOINT')
 OAUTH_LOGOUT_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_LOGOUT_ENDPOINT')
 
 OAUTH_CLIENT_ID = os.getenv('OAUTH_CLIENT_ID')
-OAUTH_CLIENT_SECRET = os.getenv('OAUTH_CLIENT_SECRET')
 OAUTH_SCOPES = ['openid', 'profile', 'email']
 
 OAUTH_CALLBACK_URL = os.environ.get('OAUTH_CALLBACK_URL', 'http://localhost:8000/auth/callback')
