@@ -105,16 +105,18 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # OAuth Configuration
-OAUTH_SERVER_URL = os.getenv('OAUTH_SERVER_URL')
-OAUTH_AUTHORIZATION_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_AUTHORIZATION_ENDPOINT')
-OAUTH_TOKEN_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_TOKEN_ENDPOINT')
-OAUTH_USERINFO_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_USERINFO_ENDPOINT')
-OAUTH_JWKS_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_JWKS_ENDPOINT')
-OAUTH_LOGOUT_URI = OAUTH_SERVER_URL + os.getenv('OAUTH_LOGOUT_ENDPOINT')
+OAUTH_SERVER_URL: str = os.environ.get("OAUTH_SERVER_URL", "")
+OAUTH_AUTHORIZATION_URI: str = OAUTH_SERVER_URL + os.environ.get('OAUTH_AUTHORIZATION_ENDPOINT', "/oauth2/authorize")
+OAUTH_TOKEN_URI: str = OAUTH_SERVER_URL + os.environ.get('OAUTH_TOKEN_ENDPOINT', "/oauth2/token")
+OAUTH_USERINFO_URI: str = OAUTH_SERVER_URL + os.environ.get('OAUTH_USERINFO_ENDPOINT', "/oauth2/userinfo")
+OAUTH_JWKS_URI: str = OAUTH_SERVER_URL + os.environ.get('OAUTH_JWKS_ENDPOINT', "/oauth2/jwks")
+OAUTH_LOGOUT_URI: str = OAUTH_SERVER_URL + os.environ.get('OAUTH_LOGOUT_ENDPOINT', "/oidc/logout")
 
-OAUTH_CLIENT_ID = os.getenv('OAUTH_CLIENT_ID')
-OAUTH_SCOPES = ['openid', 'profile', 'email']
+OAUTH_CLIENT_ID: str = os.environ.get('OAUTH_CLIENT_ID', '')
+OAUTH_SCOPES: list = os.environ.get('OAUTH_SCOPES', 'openid profile email').split(' ')
 
-OAUTH_CALLBACK_URL = os.environ.get('OAUTH_CALLBACK_URL', 'http://localhost:8000/auth/callback')
+OAUTH_CALLBACK_URL: str = os.environ.get('OAUTH_CALLBACK_URL', 'http://localhost:8000/auth/callback')
+
+OAUTH_VERIFY_SSL: bool = os.environ.get('OAUTH_VERIFY_SSL', 'False').lower() == 'true'
 
 #LOGIN_URL = '/login'

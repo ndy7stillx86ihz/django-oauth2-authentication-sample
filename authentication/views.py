@@ -1,5 +1,6 @@
 import secrets
 import requests as req
+import urllib3
 
 from django.conf import settings
 from django.contrib import messages
@@ -9,6 +10,9 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from oauthlib.oauth2 import WebApplicationClient
 from authentication.utils import generate_pkce_pair
+
+# Disable SSL warnings (only for development)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 CLIENT_ID = settings.OAUTH_CLIENT_ID
 
@@ -63,14 +67,18 @@ def callback_view(request):
             redirect_uri=settings.OAUTH_CALLBACK_URL,
             client_id=CLIENT_ID,
             code_verifier=request.session['code_verifier']
-        )
+        ),
+        verify=settings.OAUTH_VERIFY_SSL
     )
 
     client.parse_request_body_response(response.text)
 
     response = req.get(settings.OAUTH_USERINFO_URI, headers={
         'Authorization': f'Bearer {client.token["access_token"]}'
-    })
+    }, verify=settings.OAUTH_VERIFY_SSL)
+
+    print("USERINFO RESPONSE:", response.text)
+    print("TOKEN:", client.token)
 
     json_dict = response.json()
 
